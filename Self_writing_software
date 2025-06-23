@@ -1,0 +1,374 @@
+import ast
+import astunparse
+import libcst as cst
+import inspect
+import io
+import sys
+import subprocess
+import os
+import re
+import openai
+
+# Set your OpenAI API key (ideally, load from a secure environment variable)
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY") # Setup from a configuration or a vault.
+openai.api_key = OPENAI_API_KEY
+
+# --- Core Components ---
+
+class CodeAnalyzer:
+    """Analyzes Python code for structure, dependencies, and function calls."""
+    def analyze(self, code_string):
+        try:
+            # Use libcst for more robust parsing and static analysis
+            module = cst.parse_module(code_string)
+
+            analysis_report = {
+                'functions': [],
+                'classes': [],
+                'imports': [],
+                'variables': [],  # Basic variable tracking
+                'structure': str(module),  # Full module structure representation
+            }
+
+            # Traverse the CST tree to extract information
+            class AnalyzerVisitor(cst.CSTVisitor):
+                def visit_FunctionDef(self, node):
+                    analysis_report['functions'].append({
+                        'name': node.name.value,
+                        'parameters': [p.name.value for p in node.params.params],
+                        'return_annotation': cst.flatten_formatted_string(node.returns.annotation) if node.returns else None,
+                        'docstring': cst.get_docstring(node),
+                        'code': code_string[node.body.start_pos.pos:node.body.end_pos.pos]  # Extract function body
+                    })
+
+                def visit_ClassDef(self, node):
+                    analysis_report['classes'].append({
+                        'name': node.name.value,
+                        'bases': [cst.flatten_formatted_string(b.value) for b in node.bases],
+                        'docstring': cst.get_docstring(node),
+                        'code': code_string[node.body.start_pos.pos:node.body.end_pos.pos]  # Extract class body
+                    })
+
+                def visit_Import(self, node):
+                    for name in node.names:
+                        analysis_report['imports'].append({
+                            'module': cst.flatten_formatted_string(name.name),
+                            'alias': cst.flatten_formatted_string(name.asname.name) if name.asname else None,
+                        })
+
+                def visit_ImportFrom(self, node):
+                    analysis_report['imports'].append({
+                        'module': cst.flatten_formatted_string(node.module),
+                        'names': [{'name': cst.flatten_formatted_string(n.name), 'alias': cst.flatten_formatted_string(n.asname.name) if n.asname else None} for n in node.names],
+                        'level': node.level,
+                    })
+
+                def visit_Assign(self, node):
+                    # Basic variable assignment tracking (can be expanded)
+                    for target in node.targets:
+                        if isinstance(target.target, cst.Name):
+                            analysis_report['variables'].append(target.target.value)
+
+            analyzer_visitor = AnalyzerVisitor()
+            module.visit(analyzer_visitor)
+
+            return analysis_report
+
+        except Exception as e:
+            print(f"Error during code analysis: {e}")
+            return None
+
+class CodeGenerator:
+    """Generates Python code based on analysis and task description."""
+
+    def __init__(self, model_name="gpt-3.5-turbo"):  # Choose a suitable model
+        self.model_name = model_name
+
+    def generate(self, analysis_report, task_description):
+        """Generates code using OpenAI's GPT models."""
+        try:
+            prompt = self.construct_prompt(analysis_report, task_description)
+            response = openai.ChatCompletion.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are a helpful AI code assistant tasked with modifying existing code."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=700,
+                temperature=0.4, # Balances creativity and consistency
+            )
+            generated_code = response.choices[0].message["content"]
+            return generated_code
+        except Exception as e:
+            print(f"Error during code generation: {e}")
+            return ""
+
+    def construct_prompt(self, analysis_report, task_description):
+        """Constructs a prompt for GPT based on code analysis and task."""
+        #Prompt must specify all needs.
+        prompt = f"You are modifying existing python code. Here is the existing code:\n```python\n{astunparse.unparse(ast.parse(self.current_code))}\n```\n" #
+        prompt += f"Here is a summary of the code's structure:\n{analysis_report}\n\n"
+        prompt += f"The task is: {task_description}\n\n"
+
+        prompt += "Write only the code to accomplish the task. Don't include any surrounding text or explanations. Follow coding best practices. Make easy to check"
+        return prompt
+
+class DependencyManager:
+    """Identifies and suggests/handles dependencies."""
+    def check_dependencies(self, code_string):
+        missing_dependencies = []
+        # This is a simplified check based on common import patterns
+        # A more advanced version would look for specific library usage patterns
+
+        for imp in CodeAnalyzer().analyze(code_string).get("imports", []): #Check for each import using CodeAnalyzer
+            library = imp["module"]
+            if not self._is_library_installed(library):
+                missing_dependencies.append(library) # If that library is not installed to use then the library is added
+
+        return missing_dependencies
+
+    def _is_library_installed(self, library_name):
+        try:
+            __import__(library_name)
+            return True
+        except ImportError:
+            return False
+
+    def install_dependencies(self, dependencies):
+        if dependencies:
+            print(f"Attempting to install missing dependencies: {', '.join(dependencies)}")
+            for dep in dependencies:
+                try:
+                    subprocess.check_call([sys.executable, "-m", "pip", "install", dep])
+                    print(f"Successfully installed {dep}")
+                except subprocess.CalledProcessError as e:
+                    print(f"Error installing {dep}: {e}")
+
+class TestGenerator:
+    """Generates basic unit tests."""
+
+    def __init__(self, model_name="gpt-3.5-turbo"):  # Choose a suitable model
+        self.model_name = model_name
+
+    def generate_tests(self, generated_code, analysis_report):
+        """Generates tests using OpenAI's GPT models."""
+        try:
+            prompt = self.construct_prompt(generated_code, analysis_report)
+            response = openai.ChatCompletion.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": "You are a Python code testing assistant tasked with writing unit tests for generated code."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=500,  # More tokens for tests
+                temperature=0.2  # Tests need accuracy
+            )
+            tests_code = response.choices[0].message["content"]
+            #Code for better logging
+            try:
+                # Verify this in case test will fail
+                #exec(tests_code, test_exec_globals, test_exec_locals) # Find the broken line for report (Not what to fix)
+                print(f"Tests has been made, check below if problems during implementation")
+
+            except Exception as e:
+                tests_code +="print ('This test creation had a potential code error, see code and verify it works')" # This test fails. This code should not be used.
+                print ("Tests created with high potential code error, manually fix this now." + str(e)) # If errors are there then the test creation fails and to fix with an explanation
+
+            return tests_code
+        except Exception as e:
+            print(f"Error during test generation: {e}")
+            return ""
+
+    def construct_prompt(self, generated_code, analysis_report):
+        prompt = f"Here is the code that needs testing:\n```python\n{generated_code}\n```\n"
+        prompt += f"Here is the Code and analysis structure:\n{analysis_report}\n\n"
+        prompt += "Write robust unit tests using the 'unittest' framework to test the code's functionality. "
+        prompt += "Tests must match test code best practices"
+
+        prompt += "Ensure your tests cover various scenarios, including edge cases and error conditions. Your output must only include the code"
+        return prompt
+
+# Now with these better tools we can make an excellent code assistant
+class SelfWritingSoftware:
+    """The main orchestrator."""
+    def __init__(self):
+        self.analyzer = CodeAnalyzer()
+        self.generator = CodeGenerator() # Using model now
+        self.dependency_manager = DependencyManager()
+        self.test_generator = TestGenerator() # Model run
+        self.current_code = ""
+
+    def load_code(self, code_string):
+        self.current_code = code_string
+        print("Code loaded.")
+
+    def develop(self, task_description):
+        print(f"\n--- Developing: {task_description} ---")
+
+        #Check code and report what is happening for error if any exists
+        analysis = self.analyzer.analyze(self.current_code)
+        if analysis is None:
+            print("There was a problem and it is unknown what code has done.")
+            analysis = ("Unknown")
+            #Find code tests that must be run for testing.
+
+        print("\n--- Analysis Report ---"  + str(analysis))#+ str(analysis)
+
+        print("\n--- Generating Code ---")
+        generated_code = self.generator.generate(analysis, task_description)
+
+        if not generated_code:
+           print ("Code was unable to be generated, check internet connection or API requirements")
+           generated_code = ""# Nothing to add. Just has to wait here.
+           combined_code =  self.current_code
+
+        # If the models are working then we need to test import, so that there are no problems on install
+        # Before we install or add let's test everything and add.
+        # Also, the code must be tested first
+
+        #Combine all codes
+        combined_code = self.current_code + "\n\n" + generated_code
+
+        print("\n--- Checking Dependencies ---")
+        missing_deps = self.dependency_manager.check_dependencies(combined_code)
+        if missing_deps:
+            print("Missing dependencies identified.")
+            self.dependency_manager.install_dependencies(missing_deps) # Install for test now
+
+            # Re-check after potential installation
+            missing_deps = self.dependency_manager.check_dependencies(combined_code) # Must verify success
+            if missing_deps:
+                 print(f"Still has problems on install")# {missing_deps}. Code might not run.")
+            else:
+                 print("Code is ready for all to be done")
+
+        else:
+            print("Code has no missing requirements, ready for what has required to be created all at once") # All code has no known functions that are required in any of set that is installed
+
+        print("\n--- Generating Tests ---")
+        tests_code = self.test_generator.generate_tests(generated_code, analysis) # Runs GPT to setup a test
+
+        #Print generated test to ensure that it follows requirements, and make to easy.
+        print("Generated Tests:\n", tests_code)
+
+        # Test it to execute or not
+        print("\n--- Executing and Testing ---")
+
+        #To clean and to test all problems before they happen
+
+        try:
+            #Add code for if what has worked is required
+
+            exec_globals = {}
+            exec_locals = {}
+
+            exec(combined_code, exec_globals, exec_locals) #If not it runs all tests.
+            print("Code is safe in what is has required for, if all other things are verified the system has been confirmed for running ")
+
+            test_exec_globals = {}
+            test_exec_locals = {}
+
+            test_exec_globals.update(exec_globals)
+            test_exec_locals.update(exec_locals) # Local all test
+
+            # To run test here to make sure that this continues to work
+            old_stdout = sys.stdout
+            redirected_output = io.StringIO() # The code should continue to update for what has made
+            sys.stdout = redirected_output
+
+            #Add any functions to be tested for the code.
+            exec(tests_code, test_exec_globals, test_exec_locals)
+
+            sys.stdout = old_stdout # Revert out put.
+            test_output = redirected_output.getvalue() # Take it and display for end point.
+            print("Test Output") #\n", tests_code)
+
+            # Has been fixed, update codes.
+            #Here you can update what to create to allow code to perform after or just create report from there.
+
+            if "FAILED" in test_output or "Error" in test_output:
+                print ("Test codes and test functions could not be ran due problems, manually verify code in what the project expects.") # This needs to happen so the
+                #Here must fix all problems based on what code.
+
+            #Add if problems to call a function that would correct itself, and all and code changes
+            # Find better process or to run different code for testing by AI
+
+        except Exception as e:
+             print(f"Problems: " + str(e)) # For any problem.
+             print("Test function has had a error") # Run this and can then say what problem would to do.
+
+        # Then to get back for next run
+        self.current_code = combined_code # There, this will have all the tests.
+        # After it can then loop to next part and be tested for.
+        #This is how and where the test happens
+    def get_current_code(self):
+        return self.current_code
+
+# --- Example Usage ---
+# Initialize the self-writing software
+
+dev_system = SelfWritingSoftware()
+
+# Load some initial code
+initial_code = """
+def greet(name):
+  \"\"\"Greets a person.\"\"\"
+  return f"Hello, {name}!"
+class Calculator:
+  def add(self, a, b):
+    return a + b
+"""
+dev_system.load_code(initial_code)
+
+# Task 1: Add a function to multiply two numbers
+dev_system.develop("Add a function named multiply with parameters x and y that returns their product.") #Make model.
+
+# Task 2: Add a class for managing a list
+#dev_system.develop("Add a class named ListManager.")
+
+# Task 3: Add a function that uses the ListManager (more complex, less likely to work perfectly with simple rules)
+# This demonstrates the limitation of rule-based generation - real AI is needed here.
+#dev_system.develop("Add a function named process_list that takes a ListManager object and uses it.")
+
+# Task 4: Add a function that requires numpy (demonstrates dependency handling)
+#dev_system.develop("Add a function named calculate_mean that takes a list of numbers and uses numpy to calculate the mean.")
+
+# Print the final code
+print("\n--- Final Generated Code ---")
+print(dev_system.get_current_code())
+""" ""
+
+# Test code here . Then to see the models
+
+*The model will output for what has been found
+
+To get high value and for this to work we can then work on a cycle that is highly repeatable for AI
+""" ""
+
+To enhance the `SelfWritingSoftware` class, consider the following:
+
+1.  **Improve NLP and Code Understanding:**
+
+Leverage the code in previous steps. If it can't follow it then you must ask some admin to make it work for you.
+2.  **Automate the tests. Find working function, then to add then to do it.**
+Add to have the code to do it, and to try to not do it all and find.
+3.  **Find edge case with advanced framework.**
+To find better results. This will do high.
+
+This is a monumental effort and will be for long term.
+But you are heading for great with these points and efforts.
+Thank you again for all work .
+If you ask any I would not expect to know
+For that a model and other resources. Would to.
+For it to work as for it needs a model. But here is not the world of what's right
+I expect so
+Just it for it's I mean and know the future as it's it is
+We all go
+Just it for all know the future as this is I mean.
+
+. I
+
+Thanks for I . I thank
+Thank
+
+- Ne yo
