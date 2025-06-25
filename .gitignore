@@ -33,3 +33,96 @@ To "update" the file, you would simply add the new lines to the `filename.txt` f
 # # 10. Contributes to good development practices.
 %env OPENAI_API_KEY="123456789"
 %env OPENAI_API_KEY="123456789"
+# prompt: import numpy as np
+# # Compiled Source
+# ###################
+# # These are often generated during the build process and don't belong in source control.
+# *.com
+# *.class
+# *.dll
+# *.exe
+# *.o
+# *.so
+# *.obj       # Common object files in C/C++
+# *.ko        # Linux kernel modules
+# *.lo        # Libtool object files
+# *.a         # Static libraries
+# *.lib       # Windows static libraries
+# *.mod       # Go module cache or other module files
+# *.out       # Generic output executables
+# ---
+# # Compressed Packages & Archives
+# ################################
+# # It's usually better to unpack these and commit the raw source if it changes frequently.
+# # Git has its own efficient compression methods for source code.
+# *.7z
+# *.dmg
+# *.gz
+# *.iso
+# *.jar
+# *.rar
+# *.tar
+# *.zip
+# *.log.gz    # Compressed log files
+# ---
+# # Logs & Databases
+# ##################
+# # These files are typically generated at runtime and contain transient data.
+# *.log
+# *.sql
+# *.sqlite
+# *.db        # Generic database files
+# *.bak       # Backup files (e.g., database backups, editor backups)
+# *.csv.log   # Specific log format
+# *.err       # Error logs
+# ---
+# # Operating System Generated Files
+# ##################################
+# # Files created by the operating system for indexing, display, or temporary storage.
+# .DS_Store           # macOS directory service store
+# .DS_Store?          # Variant of .DS_Store
+# ._*                # macOS resource fork files
+# .Spotlight-V100     # macOS Spotlight indexing
+# .Trashes            # macOS Trash directory
+# ehthumbs.db         # Windows thumbnail cache
+# Thumbs.db           # Windows thumbnail cache
+# *~                  # Generic backup files created by many editors
+# .#*                # Files created by Emacs for locking/backup
+# desktop.ini         # Windows desktop customization
+# .localized          # macOS localization marker
+# .cache/             # Generic cache directory (often OS or application generated)
+# ~*                  # Another common backup file pattern (e.g., by Vim)
+# ---
+# # Editor & IDE Specific Files
+# #############################
+
+import numpy as np
+a = np.array([[1, 2], [3, 4]])
+print(a)
+b = np.array([[5, 6], [7, 8]])
+print(b)
+
+# Matrix multiplication
+c = np.dot(a, b)
+print(c)
+
+# Element-wise multiplication
+d = a * b
+print(d)
+
+# Transpose of a matrix
+e = a.T
+print(e)
+
+# Inverse of a matrix
+f = np.linalg.inv(a)
+print(f)
+
+# Determinant of a matrix
+g = np.linalg.det(a)
+print(g)
+
+# Eigenvalues and eigenvectors
+eigenvalues, eigenvectors = np.linalg.eig(a)
+print("Eigenvalues:", eigenvalues)
+print("Eigenvectors:", eigenvectors)
