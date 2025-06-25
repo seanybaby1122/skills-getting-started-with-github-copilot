@@ -1,42 +1,35 @@
-*.temp*
 
-# Compiled source #
-###################
-*.com
-*.class
-*.dll
-*.exe
-*.o
-*.so
 
-# Packages #
-############
-# it's better to unpack these files and commit the raw source
-# git has its own built in compression methods
-*.7z
-*.dmg
-*.gz
-*.iso
-*.jar
-*.rar
-*.tar
-*.zip
-
-# Logs and databases #
-######################
-*.log
-*.sql
-*.sqlite
-
-# OS generated files #
-######################
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.actrc*
-
-__pycache__/
+To "update" the file, you would simply add the new lines to the `filename.txt` file you mentioned earlier. If you are working within a Google Colab/Jupyter environment and this `filename.txt` is intended to *be* the `.gitignore` for a Git repository you're managing somehow, you would treat it like any other text file:
+# prompt: # Configuration files that are user-specific #
+# ###############################################
+# # If you have configuration files that are specific to a user's environment
+# # and should not be shared across contributors, list them here.
+# # e.g., config_local.yaml
+# # Python specific ignores #
+# ###########################
+# __pycache__/  # Python cache files
+# *.pyc  # Python compiled files
+# venv/  # Virtual environment directories
+# .venv/  # Virtual environment directories
+# pip-log.txt  # pip log file
+# .tox/  # Tox test directories
+# .coverage  # Coverage files
+# .mypy_cache/  # Mypy cache directory
+# .pytest_cache/  # pytest cache directory
+# nosetests.xml  # nose test output
+# coverage.xml  # coverage output
+# htmlcov/  # coverage html report
+# # Perceived "perks" or benefits of a comprehensive .gitignore:
+# # 1. Keeps your repository clean and focused on source code.
+# # 2. Reduces repository size by excluding unnecessary files.
+# # 3. Avoids merge conflicts caused by frequently changing generated files.
+# # 4. Prevents accidental commitment of sensitive information (credentials, environment variables).
+# # 5. Improves performance of Git operations.
+# # 6. Makes it easier for new contributors to set up the project.
+# # 7. Standardizes which files should be tracked by version control.
+# # 8. Reduces noise in `git status` output.
+# # 9. Helps maintain a clear history of relevant code changes.
+# # 10. Contributes to good development practices.
+%env OPENAI_API_KEY="123456789"
+%env OPENAI_API_KEY="123456789"
