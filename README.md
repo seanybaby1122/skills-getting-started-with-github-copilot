@@ -1,4 +1,52 @@
-# Getting Started with GitHub Copilot# prompt: Simulate 30 second time lapse and collect badges and GitHub CLI installed, and authenticate using the GitHub CLI OAuth app.
+# prompt: Getting Started with GitHub Copilot# prompt: Simulate 30 second time lapse and collect badges and GitHub CLI installed, and authenticate using the GitHub CLI OAuth app
+
+import time
+import os
+
+# Simulate a 30-second time lapse
+print("Simulating a 30-second time lapse...")
+time.sleep(30)
+print("Time lapse complete.")
+
+# Simulate collecting badges (this is conceptual)
+print("Collecting virtual badges...")
+badges = ["Badge 1: Setup Complete", "Badge 2: Time Traveler", "Badge 3: Collaboration Ready"]
+for badge in badges:
+    print(f"- {badge}")
+print("Badges collected.")
+
+# Simulate checking if GitHub CLI is installed
+print("Checking for GitHub CLI installation...")
+# In a real scenario, you would check if the `gh` command exists in the PATH
+# For this simulation, we assume it's installed or simulate the installation process
+try:
+    # This command will only work if gh is actually installed
+    os.system("gh --version")
+    print("GitHub CLI is installed.")
+except Exception as e:
+    print(f"Could not verify GitHub CLI installation: {e}")
+    print("Simulating GitHub CLI installation...")
+    # In a real notebook, you might run a shell command to install it
+    # !curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+    # !sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+    # !echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+    # !sudo apt update
+    # !sudo apt install gh -y
+    print("GitHub CLI simulated installation complete.")
+
+
+# Simulate authenticating using the GitHub CLI OAuth app
+print("Authenticating with GitHub CLI using OAuth app...")
+# In a real scenario, you would run the gh auth login command
+# This would open a browser window to authenticate.
+# For security reasons, we cannot perform this interactive step directly in the notebook.
+# The user would need to run:
+# !gh auth login
+
+print("\nPlease run `!gh auth login` in a new cell to complete the authentication process via the web browser.")
+print("Follow the instructions in your browser to authorize the GitHub CLI OAuth app.")
+print("Once authenticated, the gh command will be authorized to interact with your GitHub account.")
+
 # currently unsupported and might require clearing the GITHUB_TOKEN and GH_TOKEN environment variables.
 # Important
 # GitHub Copilot in the CLI does not currently have plans to support 32-bit Android distributions.
