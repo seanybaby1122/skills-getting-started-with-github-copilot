@@ -1,15 +1,62 @@
+#   "name": "Python 3",
+#   "image": "mcr.microsoft.com/vscode/devcontainers/python:3.13",
+#   "forwardPorts": [8000],
+#   "postCreateCommand": "pip install -r requirements.txt",
+#   "customizations": {
+#     "vscode": {
+#       "extensions": [
+#         "GitHub.copilot",
+#         "ms-python.python",
+#         "ms-python.debugpy"
+#       ]
+#     }
+#   }
+# }
+
 {
-  "name": "Python 3",
-  "image": "mcr.microsoft.com/vscode/devcontainers/python:3.13",
-  "forwardPorts": [8000],
-  "postCreateCommand": "pip install -r requirements.txt",
+  "name": "Advanced Python 3 Development",
+  "image": "mcr.microsoft.com/vscode/devcontainers/python:3.13-bookworm",
+  "forwardPorts": [8000, 5000], // Added a common port for web apps
+  "containerUser": "vscode", // Run as non-root user for security
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind"
+  ],
+  "postCreateCommand": "pip install --upgrade pip && pip install -r requirements.txt && pre-commit install",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "version": "latest"
+    }
+  },
   "customizations": {
     "vscode": {
+      "settings": {
+        "python.formatting.provider": "black",
+        "python.linting.flake8Enabled": true,
+        "python.linting.mypyEnabled": true,
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+        }
+      },
       "extensions": [
         "GitHub.copilot",
         "ms-python.python",
-        "ms-python.debugpy"
+        "ms-python.debugpy",
+        "ms-python.flake8",
+        "ms-python.black-formatter",
+        "ms-python.mypy-type-checker",
+        "VisualStudioExptTeam.vscodeintellicode",
+        "donjayamanne.python-extension-pack",
+        "esbenp.prettier-vscode"
       ]
     }
-  }
+  },
+  "remoteUser": "vscode"
 }
